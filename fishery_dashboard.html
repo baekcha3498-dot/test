@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>어업 생산량 현황 대시보드</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#ffffff; --ink:#172033; --muted:#667085; --line:#d9e2ef;
+      --blue:#2563eb; --teal:#0f766e; --orange:#f97316; --purple:#7c3aed; --red:#dc2626;
+      --shadow:0 18px 45px rgba(16,24,40,.08); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(135deg,#f7fbff 0%,#f6f8fb 45%,#fff7ed 100%);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",Arial,sans-serif;}
+    header{padding:34px 5vw 22px;background:linear-gradient(135deg,#0f172a,#1e40af);color:#fff;}
+    header .eyebrow{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid rgba(255,255,255,.22);border-radius:999px;color:#dbeafe;font-size:13px;margin-bottom:14px}
+    h1{margin:0;font-size:clamp(28px,4vw,46px);letter-spacing:-.04em;line-height:1.08}
+    .subtitle{margin:12px 0 0;color:#dbeafe;font-size:16px}
+    main{width:min(1240px,92vw);margin:26px auto 56px;display:grid;gap:22px}
+    .grid{display:grid;gap:18px}.cards{grid-template-columns:repeat(4,minmax(0,1fr))}.charts{grid-template-columns:1.15fr .85fr}.filters{grid-template-columns:1fr 1fr}
+    .card,.panel{background:rgba(255,255,255,.92);border:1px solid rgba(217,226,239,.85);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card{padding:20px}.card small{color:var(--muted);font-weight:700}.card strong{display:block;margin-top:8px;font-size:30px;letter-spacing:-.03em}.card span{color:var(--muted);font-size:13px}.panel{padding:20px;overflow:hidden}.panel h2{margin:0 0 14px;font-size:20px;letter-spacing:-.02em}.panel p{margin:0 0 14px;color:var(--muted);font-size:14px}
+    .control-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.control{flex:1;min-width:180px}.control label{display:block;font-size:13px;font-weight:700;color:#344054;margin-bottom:8px}select,input[type=range]{width:100%}.pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#344054;font-size:13px}
+    canvas{width:100%;height:320px;border-radius:14px;background:#fff}.canvas-wrap{position:relative}.chart-note{margin-top:8px;color:var(--muted);font-size:12px;text-align:right}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}table{width:100%;border-collapse:collapse;min-width:920px}th,td{padding:12px 14px;border-bottom:1px solid #edf2f7;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:center}th{position:sticky;top:0;background:#f8fafc;color:#344054;font-size:13px;cursor:pointer;user-select:none}tbody tr:hover{background:#f8fbff}.highlight{background:#fff7ed!important;color:#9a3412;font-weight:800}tfoot td{font-weight:800;background:#f1f5f9}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#dbeafe;color:#1e40af;font-weight:700;font-size:12px}.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;color:#475467;font-size:13px}.dot{width:10px;height:10px;border-radius:50%;display:inline-block}.dot.blue{background:var(--blue)}.dot.teal{background:var(--teal)}.dot.orange{background:var(--orange)}.dot.purple{background:var(--purple)}
+    @media (max-width:900px){.cards,.charts,.filters{grid-template-columns:1fr}.card strong{font-size:26px}header{padding-left:24px;padding-right:24px}main{width:calc(100% - 28px)}canvas{height:280px}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">해양수산부 CSV 기반 · 단위: 천M/T</div>
+    <h1>어업 생산량 현황 대시보드</h1>
+    <p class="subtitle">데이터 기간: <strong>2001~2013년</strong> · 연도별 생산량, 품종별 합계, 어류·해조류 비교</p>
+  </header>
+  <main>
+    <section class="grid cards" id="summaryCards"></section>
+
+    <section class="grid filters">
+      <div class="panel">
+        <h2>검색·필터</h2>
+        <div class="control-row">
+          <div class="control"><label>시작 연도: <span id="startYearText">2001</span></label><input id="startYear" type="range" min="2001" max="2013" value="2001"></div>
+          <div class="control"><label>종료 연도: <span id="endYearText">2013</span></label><input id="endYear" type="range" min="2001" max="2013" value="2013"></div>
+          <div class="control"><label>표시 품종</label><select id="speciesSelect"><option value="all">전체 품종</option><option>어류</option><option>패류</option><option>갑각류</option><option>연체동물</option><option>기타수산동물</option><option>해조류</option></select></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>최고 생산 연도</h2>
+        <p>계(총합계) 기준 최고 생산 연도는 <span class="badge">2008년</span>이며, 표와 선 그래프에서 강조됩니다.</p>
+        <div class="legend"><span><i class="dot blue"></i> 계 추이</span><span><i class="dot teal"></i> 어류</span><span><i class="dot orange"></i> 해조류</span><span><i class="dot purple"></i> 품종별 합계</span></div>
+      </div>
+    </section>
+
+    <section class="grid charts">
+      <div class="panel"><h2>연도별 총 생산량(계) 추이</h2><canvas id="totalLine" width="900" height="380"></canvas><div class="chart-note">2008년 최고점 강조</div></div>
+      <div class="panel"><h2>품종별 생산량 합계</h2><canvas id="speciesBar" width="700" height="380"></canvas><div class="chart-note">필터 기간 기준 합계</div></div>
+    </section>
+
+    <section class="panel"><h2>어류 vs 해조류 비교</h2><canvas id="fishSeaweed" width="1100" height="360"></canvas></section>
+
+    <section class="panel">
+      <h2>연도별 데이터 표</h2>
+      <p>컬럼 헤더를 클릭하면 정렬됩니다. 합계 행은 현재 필터 기준으로 계산됩니다.</p>
+      <div class="table-wrap"><table id="dataTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    </section>
+  </main>
+  <script>
+    const rawData = [{"연도":2001,"계":2665,"어류":1467,"패류":283,"갑각류":74,"연체동물":413,"기타수산동물":39,"해조류":388},{"연도":2002,"계":2476,"어류":1202,"패류":272,"갑각류":72,"연체동물":394,"기타수산동물":27,"해조류":508},{"연도":2003,"계":2487,"어류":1144,"패류":403,"갑각류":89,"연체동물":379,"기타수산동물":15,"해조류":457},{"연도":2004,"계":2519,"어류":1157,"패류":410,"갑각류":85,"연체동물":306,"기타수산동물":15,"해조류":546},{"연도":2005,"계":2714,"어류":1265,"패류":409,"갑각류":92,"연체동물":295,"기타수산동물":16,"해조류":636},{"연도":2006,"계":3032,"어류":1261,"패류":474,"갑각류":110,"연체동물":392,"기타수산동물":17,"해조류":778},{"연도":2007,"계":3275,"어류":1330,"패류":555,"갑각류":124,"연체동물":432,"기타수산동물":23,"해조류":811},{"연도":2008,"계":3361,"어류":1448,"패류":428,"갑각류":126,"연체동물":402,"기타수산동물":23,"해조류":935},{"연도":2009,"계":3182,"어류":1425,"패류":420,"갑각류":132,"연체동물":312,"기타수산동물":24,"해조류":870},{"연도":2010,"계":3111,"어류":1331,"패류":440,"갑각류":147,"연체동물":256,"기타수산동물":22,"해조류":915},{"연도":2011,"계":3256,"어류":1356,"패류":467,"갑각류":130,"연체동물":269,"기타수산동물":28,"해조류":1007},{"연도":2012,"계":3183,"어류":1268,"패류":433,"갑각류":135,"연체동물":293,"기타수산동물":23,"해조류":1032},{"연도":2013,"계":3135,"어류":1195,"패류":346,"갑각류":149,"연체동물":282,"기타수산동물":23,"해조류":1140}];
+    const cols = ["연도","계","어류","패류","갑각류","연체동물","기타수산동물","해조류"];
+    const species = cols.slice(2);
+    let sortKey = "연도", sortAsc = true;
+    const fmt = n => Number(n).toLocaleString('ko-KR');
+    function filtered(){let s=+startYear.value,e=+endYear.value;if(s>e){[s,e]=[e,s]}return rawData.filter(d=>d.연도>=s&&d.연도<=e).sort((a,b)=>(sortAsc?1:-1)*(a[sortKey]-b[sortKey]));}
+    function totals(data){return cols.slice(1).reduce((o,k)=>(o[k]=data.reduce((s,d)=>s+d[k],0),o),{});}
+    function updateCards(data){const t=totals(data), max=data.reduce((a,b)=>a.계>b.계?a:b,data[0]);summaryCards.innerHTML=`<div class="card"><small>필터 기간 총 생산량</small><strong>${fmt(t.계)}</strong><span>천M/T</span></div><div class="card"><small>평균 연간 생산량</small><strong>${fmt(Math.round(t.계/data.length))}</strong><span>천M/T</span></div><div class="card"><small>최고 생산 연도</small><strong>${max.연도}년</strong><span>${fmt(max.계)}천M/T</span></div><div class="card"><small>어류 > 해조류 연도</small><strong>${data.filter(d=>d.어류>d.해조류).length}</strong><span>개년</span></div>`;}
+    function table(data){const selected=speciesSelect.value;let showCols=selected==='all'?cols:["연도","계",selected];dataTable.tHead.innerHTML='<tr>'+showCols.map(c=>`<th data-key="${c}">${c}${sortKey===c?(sortAsc?' ▲':' ▼'):''}</th>`).join('')+'</tr>';dataTable.tBodies[0].innerHTML=data.map(r=>'<tr class="'+(r.연도===2008?'highlight':'')+'">'+showCols.map(c=>`<td>${c==='연도'?r[c]:fmt(r[c])}</td>`).join('')+'</tr>').join('');const t=totals(data);dataTable.tFoot.innerHTML='<tr>'+showCols.map(c=>`<td>${c==='연도'?'합계':fmt(t[c])}</td>`).join('')+'</tr>';document.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.key; if(sortKey===k) sortAsc=!sortAsc; else {sortKey=k; sortAsc=true;} render();});}
+    function clear(ctx){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height)}
+    function axes(ctx, pad){ctx.strokeStyle='#d9e2ef';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,20);ctx.lineTo(pad,ctx.canvas.height-pad);ctx.lineTo(ctx.canvas.width-20,ctx.canvas.height-pad);ctx.stroke();ctx.font='13px Noto Sans KR, Arial';ctx.fillStyle='#667085'}
+    function lineChart(canvas,data){const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,p=55;clear(ctx);axes(ctx,p);const vals=data.map(d=>d.계),min=Math.min(...vals)*.94,max=Math.max(...vals)*1.03;const x=i=>p+i*(w-p-35)/(data.length-1||1), y=v=>h-p-(v-min)*(h-p-30)/(max-min);ctx.strokeStyle='#2563eb';ctx.lineWidth=4;ctx.beginPath();data.forEach((d,i)=>i?ctx.lineTo(x(i),y(d.계)):ctx.moveTo(x(i),y(d.계)));ctx.stroke();data.forEach((d,i)=>{ctx.fillStyle=d.연도===2008?'#f97316':'#2563eb';ctx.beginPath();ctx.arc(x(i),y(d.계),d.연도===2008?7:4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#667085';ctx.fillText(d.연도,x(i)-15,h-24);});ctx.fillStyle='#172033';ctx.fillText('천M/T',12,18)}
+    function barChart(canvas,data){const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,p=70;clear(ctx);axes(ctx,p);const t=totals(data);const items=species.map(k=>({k,v:t[k]}));const max=Math.max(...items.map(i=>i.v))*1.12;const bw=(w-p-35)/items.length*.58;items.forEach((it,i)=>{const x=p+i*(w-p-35)/items.length+18, bh=it.v/max*(h-p-35);ctx.fillStyle='#7c3aed';ctx.fillRect(x,h-p-bh,bw,bh);ctx.fillStyle='#344054';ctx.save();ctx.translate(x+bw/2,h-27);ctx.rotate(-Math.PI/7);ctx.textAlign='right';ctx.fillText(it.k,0,0);ctx.restore();ctx.fillStyle='#667085';ctx.textAlign='center';ctx.fillText(fmt(it.v),x+bw/2,h-p-bh-8);ctx.textAlign='left';});ctx.fillStyle='#172033';ctx.fillText('천M/T',12,18)}
+    function compareChart(canvas,data){const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,p=55;clear(ctx);axes(ctx,p);const max=Math.max(...data.flatMap(d=>[d.어류,d.해조류]))*1.1;const group=(w-p-40)/data.length, bw=group*.32;data.forEach((d,i)=>{const x=p+i*group+group*.18;[['어류','#0f766e'],['해조류','#f97316']].forEach(([k,c],j)=>{const bh=d[k]/max*(h-p-35);ctx.fillStyle=c;ctx.fillRect(x+j*bw,h-p-bh,bw*.9,bh);});ctx.fillStyle='#667085';ctx.fillText(d.연도,x-5,h-24);});ctx.fillStyle='#172033';ctx.fillText('천M/T',12,18);ctx.fillStyle='#0f766e';ctx.fillRect(w-165,18,12,12);ctx.fillStyle='#344054';ctx.fillText('어류',w-148,29);ctx.fillStyle='#f97316';ctx.fillRect(w-90,18,12,12);ctx.fillStyle='#344054';ctx.fillText('해조류',w-73,29)}
+    function render(){startYearText.textContent=startYear.value;endYearText.textContent=endYear.value;const data=filtered();updateCards(data);table(data);lineChart(totalLine,data);barChart(speciesBar,data);compareChart(fishSeaweed,data)}
+    [startYear,endYear,speciesSelect].forEach(el=>el.addEventListener('input',render));render();
+  </script>
+</body>
+</html>
